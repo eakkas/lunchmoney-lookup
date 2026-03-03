@@ -159,11 +159,32 @@
 
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Flag that the next modal open should populate our sidebar
+
+        // If the modal is already open (user already clicked the row), read it immediately
+        const existingModal = document.getElementById('transactions-modal-detail-view');
+        if (existingModal) {
+          const data = extractFromModal(existingModal);
+          if (data.payee || data.amount) {
+            onTransactionSelected(data.payee, data.amount, data.date);
+            return;
+          }
+        }
+
+        // Modal not open — trigger LunchMoney's row click to open it
         pendingLookup = true;
-        // Trigger LunchMoney's own row click to open the detail modal
-        const cell = row.querySelector('td');
-        if (cell) cell.click();
+        const clickTarget = row.querySelector('td') ||
+                            row.querySelector('[class*="cell"]') ||
+                            row.querySelector('div') ||
+                            row;
+        clickTarget.click();
+
+        // Safety fallback: if modal never appears, open sidebar with whatever we can read from the row
+        setTimeout(() => {
+          if (!pendingLookup) return; // already handled
+          pendingLookup = false;
+          const data = extractFromRow(row);
+          if (data.payee || data.amount) onTransactionSelected(data.payee, data.amount, data.date);
+        }, 1000);
       });
     });
   }
@@ -182,6 +203,23 @@
         }
       }
     }
+  }
+
+  // ── Fallback: extract data from row cells ────────────────────────────────
+  function extractFromRow(row) {
+    const cells = row.querySelectorAll('td, [class*="cell"], [class*="Cell"]');
+    let payee = null, amount = null, date = null;
+    for (const cell of cells) {
+      const text = cell.textContent.trim();
+      if (!amount && /[\$\-]?\s*\d+\.\d{2}/.test(text) && text.length < 20) {
+        amount = text;
+      } else if (!date && /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(text)) {
+        date = text;
+      } else if (!payee && text.length > 1 && text.length < 100 && !/^\$?[\d,.-]+$/.test(text)) {
+        payee = text;
+      }
+    }
+    return { payee, amount, date };
   }
 
   // ── DOM selectors for LunchMoney transaction rows ─────────────────────────
