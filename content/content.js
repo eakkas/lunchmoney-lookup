@@ -47,6 +47,7 @@
 
   // ── State ────────────────────────────────────────────────────────────────
   let currentTransaction = null;
+  let pendingLookup = false;
 
   const overlay = document.getElementById('lm-overlay');
   const payeeEl = document.getElementById('lm-payee');
@@ -110,8 +111,80 @@
     openSidebar();
   }
 
-  // ── DOM selectors for LunchMoney ─────────────────────────────────────────
-  // LunchMoney is a React SPA; selectors may need adjustment if they change their DOM.
+  // ── Extract data from LunchMoney's transaction detail modal ──────────────
+  // The modal has perfectly labeled fields — much more reliable than parsing
+  // table cells. We trigger the row click to open it, then read from it.
+  function extractFromModal(modal) {
+    const details = modal.querySelectorAll('div.transaction-detail');
+    let originalName = null, payeeName = null, amount = null, date = null;
+
+    for (const detail of details) {
+      const label = detail.querySelector('label');
+      if (!label) continue;
+      const labelText = label.textContent.trim();
+
+      if (labelText === 'Original Name') {
+        originalName = detail.querySelector('span')?.textContent.trim() || null;
+      } else if (labelText === 'Payee Name') {
+        // Payee is an editable input
+        payeeName = detail.querySelector('input')?.value.trim() || null;
+      } else if (labelText.startsWith('Amount')) {
+        amount = detail.querySelector('span')?.textContent.trim() || null;
+      } else if (labelText === 'Date') {
+        date = detail.querySelector('input')?.value.trim() || null;
+      }
+    }
+
+    return {
+      payee: originalName || payeeName,
+      amount,
+      date
+    };
+  }
+
+  // ── Row listeners ─────────────────────────────────────────────────────────
+  function attachRowListeners(rows) {
+    rows.forEach(row => {
+      if (row.dataset.lmAttached) return;
+      row.dataset.lmAttached = '1';
+
+      const existingPosition = getComputedStyle(row).position;
+      if (existingPosition === 'static') row.style.position = 'relative';
+
+      const trigger = document.createElement('button');
+      trigger.className = 'lm-trigger';
+      trigger.title = 'Lookup transaction';
+      trigger.textContent = '🔍';
+      row.appendChild(trigger);
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Flag that the next modal open should populate our sidebar
+        pendingLookup = true;
+        // Trigger LunchMoney's own row click to open the detail modal
+        const cell = row.querySelector('td');
+        if (cell) cell.click();
+      });
+    });
+  }
+
+  // ── MutationObserver — watches for new rows AND the detail modal ──────────
+  function onDomChange() {
+    attachRowListeners(findTransactionRows());
+
+    if (pendingLookup) {
+      const modal = document.getElementById('transactions-modal-detail-view');
+      if (modal) {
+        pendingLookup = false;
+        const data = extractFromModal(modal);
+        if (data.payee || data.amount) {
+          onTransactionSelected(data.payee, data.amount, data.date);
+        }
+      }
+    }
+  }
+
+  // ── DOM selectors for LunchMoney transaction rows ─────────────────────────
   const ROW_SELECTORS = [
     'tr.MuiTableRow-root',
     '[class*="TransactionRow"]',
@@ -129,65 +202,8 @@
     return [];
   }
 
-  function extractFromRow(row) {
-    const cells = row.querySelectorAll('td, [class*="cell"], [class*="Cell"]');
-    if (cells.length < 2) return null;
-
-    let payee = null, amount = null, date = null;
-
-    for (const cell of cells) {
-      const text = cell.textContent.trim();
-      if (!amount && /[\$\-]?\s*\d+\.\d{2}/.test(text) && text.length < 20) {
-        amount = text;
-      } else if (!date && /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(text)) {
-        date = text;
-      } else if (!payee && text.length > 1 && text.length < 100 && !/^\$?[\d,.-]+$/.test(text)) {
-        payee = text;
-      }
-    }
-
-    return { payee, amount, date };
-  }
-
-  function attachRowListeners(rows) {
-    rows.forEach(row => {
-      if (row.dataset.lmAttached) return;
-      row.dataset.lmAttached = '1';
-
-      // Ensure row has relative positioning for the trigger button
-      const existingPosition = getComputedStyle(row).position;
-      if (existingPosition === 'static') row.style.position = 'relative';
-
-      // Create the trigger button shown on hover
-      const trigger = document.createElement('button');
-      trigger.className = 'lm-trigger';
-      trigger.title = 'Lookup transaction';
-      trigger.textContent = '🔍';
-      row.appendChild(trigger);
-
-      trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const data = extractFromRow(row);
-        if (data) onTransactionSelected(data.payee, data.amount, data.date);
-      });
-    });
-  }
-
-  // ── MutationObserver for React SPA ───────────────────────────────────────
-  function scanAndAttach() {
-    attachRowListeners(findTransactionRows());
-  }
-
-  const observer = new MutationObserver(scanAndAttach);
+  const observer = new MutationObserver(onDomChange);
   observer.observe(document.body, { childList: true, subtree: true });
-  scanAndAttach();
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function escHtml(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  onDomChange();
 
 })();
