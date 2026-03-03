@@ -115,8 +115,11 @@
     // Payee: uniquely identified by 'editable-string' on its default-state div
     const payee = row.querySelector('.default-state.editable-string')?.textContent.trim() || null;
 
-    // Amount: inside the td with class 'number', in a span.readonly
-    const amount = row.querySelector('td.number span.readonly')?.textContent.trim() || null;
+    // Amount: try progressively broader selectors for different row types
+    const amountEl = row.querySelector('td.number span.readonly') ||
+                     row.querySelector('[id*="transaction-price"] span') ||
+                     row.querySelector('td.number span');
+    const amount = amountEl?.textContent.trim() || null;
 
     // Date: first td.editable's .default-state that isn't the payee
     const date = row.querySelector('td.editable .default-state:not(.editable-string)')?.textContent.trim() || null;
