@@ -166,11 +166,6 @@
     });
   }
 
-  // ── MutationObserver for React SPA ───────────────────────────────────────
-  const observer = new MutationObserver(() => attachRowListeners(findTransactionRows()));
-  observer.observe(document.body, { childList: true, subtree: true });
-  attachRowListeners(findTransactionRows());
-
   // ── DOM selectors for LunchMoney transaction rows ─────────────────────────
   const ROW_SELECTORS = [
     'tr.MuiTableRow-root',
@@ -188,5 +183,10 @@
     }
     return [];
   }
+
+  // ── MutationObserver for React SPA ───────────────────────────────────────
+  const observer = new MutationObserver(() => attachRowListeners(findTransactionRows()));
+  observer.observe(document.body, { childList: true, subtree: true });
+  attachRowListeners(findTransactionRows());
 
 })();

@@ -203,9 +203,7 @@
   line-height: 1.4;
 }
 
-tr:hover .lm-trigger,
-[class*="row"]:hover .lm-trigger,
-[class*="Row"]:hover .lm-trigger {
+[data-lm-attached]:hover .lm-trigger {
   opacity: 1;
 }
 
