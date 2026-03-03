@@ -111,34 +111,15 @@
   }
 
   // ── Extract data from a transaction row ───────────────────────────────────
-  function isDate(text) {
-    // Matches: "Dec 31, 2025" / "Dec 31 2025" / "12/31/2025" / "2025-12-31"
-    return /^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}$/.test(text) ||
-           /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(text) ||
-           /^\d{4}-\d{2}-\d{2}$/.test(text);
-  }
-
-  function isAmount(text) {
-    // Matches: "$45.67" / "-$45.67" / "45.67"
-    return /^-?[\$€£¥]?\s*\d+\.\d{2}$/.test(text);
-  }
-
   function extractFromRow(row) {
-    const cells = row.querySelectorAll('td, [class*="cell"], [class*="Cell"]');
-    let payee = null, amount = null, date = null;
+    // Payee: uniquely identified by 'editable-string' on its default-state div
+    const payee = row.querySelector('.default-state.editable-string')?.textContent.trim() || null;
 
-    for (const cell of cells) {
-      const text = cell.textContent.trim();
-      if (!text) continue;
+    // Amount: inside the td with class 'number', in a span.readonly
+    const amount = row.querySelector('td.number span.readonly')?.textContent.trim() || null;
 
-      if (!amount && isAmount(text)) {
-        amount = text;
-      } else if (!date && isDate(text)) {
-        date = text;
-      } else if (!payee && text.length > 1 && text.length < 100 && !/^\$?[\d,.-]+$/.test(text)) {
-        payee = text;
-      }
-    }
+    // Date: first td.editable's .default-state that isn't the payee
+    const date = row.querySelector('td.editable .default-state:not(.editable-string)')?.textContent.trim() || null;
 
     return { payee, amount, date };
   }
