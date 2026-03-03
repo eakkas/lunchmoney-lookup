@@ -1,0 +1,230 @@
+/* LunchMoney Lookup — Sidebar Styles */
+
+#lm-lookup-sidebar {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1a1a2e;
+}
+
+/* ── Overlay ──────────────────────────────────────────────────────────────── */
+#lm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 99998;
+  backdrop-filter: blur(1px);
+}
+
+#lm-lookup-sidebar.lm-open #lm-overlay {
+  display: block;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────────── */
+#lm-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+#lm-lookup-sidebar.lm-open #lm-panel {
+  transform: translateX(0);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+#lm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 16px 14px;
+  background: #1a1a2e;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+#lm-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+#lm-payee {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+}
+
+#lm-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 2px;
+}
+
+#lm-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 0 0 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+#lm-close:hover {
+  color: #fff;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+#lm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────── */
+.lm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lm-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.lm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  background: #f9f9f9;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+}
+
+.lm-btn:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+
+.lm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lm-btn-icon {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.lm-icon-google { background: #4285F4; }
+
+/* ── Custom search bar ────────────────────────────────────────────────────── */
+#lm-custom-search {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+#lm-query-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+#lm-query-input:focus {
+  border-color: #4f46e5;
+}
+
+#lm-query-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#lm-query-btn:hover {
+  background: #4338ca;
+}
+
+/* ── Row trigger button ───────────────────────────────────────────────────── */
+.lm-trigger {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #fff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, border-color 0.15s;
+  z-index: 10;
+  line-height: 1.4;
+}
+
+tr:hover .lm-trigger,
+[class*="row"]:hover .lm-trigger,
+[class*="Row"]:hover .lm-trigger {
+  opacity: 1;
+}
+
+.lm-trigger:hover {
+  border-color: #4f46e5;
+}
+
+/* ── Icon buttons ─────────────────────────────────────────────────────────── */
+.lm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.lm-icon-gmail { background: #EA4335; }
