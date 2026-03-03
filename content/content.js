@@ -47,7 +47,6 @@
 
   // ── State ────────────────────────────────────────────────────────────────
   let currentTransaction = null;
-  let pendingLookup = false;
 
   const overlay = document.getElementById('lm-overlay');
   const payeeEl = document.getElementById('lm-payee');
@@ -111,35 +110,37 @@
     openSidebar();
   }
 
-  // ── Extract data from LunchMoney's transaction detail modal ──────────────
-  // The modal has perfectly labeled fields — much more reliable than parsing
-  // table cells. We trigger the row click to open it, then read from it.
-  function extractFromModal(modal) {
-    const details = modal.querySelectorAll('div.transaction-detail');
-    let originalName = null, payeeName = null, amount = null, date = null;
+  // ── Extract data from a transaction row ───────────────────────────────────
+  function isDate(text) {
+    // Matches: "Dec 31, 2025" / "Dec 31 2025" / "12/31/2025" / "2025-12-31"
+    return /^[A-Za-z]{3}\s+\d{1,2},?\s+\d{4}$/.test(text) ||
+           /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(text) ||
+           /^\d{4}-\d{2}-\d{2}$/.test(text);
+  }
 
-    for (const detail of details) {
-      const label = detail.querySelector('label');
-      if (!label) continue;
-      const labelText = label.textContent.trim();
+  function isAmount(text) {
+    // Matches: "$45.67" / "-$45.67" / "45.67"
+    return /^-?[\$€£¥]?\s*\d+\.\d{2}$/.test(text);
+  }
 
-      if (labelText === 'Original Name') {
-        originalName = detail.querySelector('span')?.textContent.trim() || null;
-      } else if (labelText === 'Payee Name') {
-        // Payee is an editable input
-        payeeName = detail.querySelector('input')?.value.trim() || null;
-      } else if (labelText.startsWith('Amount')) {
-        amount = detail.querySelector('span')?.textContent.trim() || null;
-      } else if (labelText === 'Date') {
-        date = detail.querySelector('input')?.value.trim() || null;
+  function extractFromRow(row) {
+    const cells = row.querySelectorAll('td, [class*="cell"], [class*="Cell"]');
+    let payee = null, amount = null, date = null;
+
+    for (const cell of cells) {
+      const text = cell.textContent.trim();
+      if (!text) continue;
+
+      if (!amount && isAmount(text)) {
+        amount = text;
+      } else if (!date && isDate(text)) {
+        date = text;
+      } else if (!payee && text.length > 1 && text.length < 100 && !/^\$?[\d,.-]+$/.test(text)) {
+        payee = text;
       }
     }
 
-    return {
-      payee: originalName || payeeName,
-      amount,
-      date
-    };
+    return { payee, amount, date };
   }
 
   // ── Row listeners ─────────────────────────────────────────────────────────
@@ -159,68 +160,16 @@
 
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
-
-        // If the modal is already open (user already clicked the row), read it immediately
-        const existingModal = document.getElementById('transactions-modal-detail-view');
-        if (existingModal) {
-          const data = extractFromModal(existingModal);
-          if (data.payee || data.amount) {
-            onTransactionSelected(data.payee, data.amount, data.date);
-            return;
-          }
-        }
-
-        // Modal not open — trigger LunchMoney's row click to open it
-        pendingLookup = true;
-        const clickTarget = row.querySelector('td') ||
-                            row.querySelector('[class*="cell"]') ||
-                            row.querySelector('div') ||
-                            row;
-        clickTarget.click();
-
-        // Safety fallback: if modal never appears, open sidebar with whatever we can read from the row
-        setTimeout(() => {
-          if (!pendingLookup) return; // already handled
-          pendingLookup = false;
-          const data = extractFromRow(row);
-          if (data.payee || data.amount) onTransactionSelected(data.payee, data.amount, data.date);
-        }, 1000);
+        const data = extractFromRow(row);
+        if (data.payee || data.amount) onTransactionSelected(data.payee, data.amount, data.date);
       });
     });
   }
 
-  // ── MutationObserver — watches for new rows AND the detail modal ──────────
-  function onDomChange() {
-    attachRowListeners(findTransactionRows());
-
-    if (pendingLookup) {
-      const modal = document.getElementById('transactions-modal-detail-view');
-      if (modal) {
-        pendingLookup = false;
-        const data = extractFromModal(modal);
-        if (data.payee || data.amount) {
-          onTransactionSelected(data.payee, data.amount, data.date);
-        }
-      }
-    }
-  }
-
-  // ── Fallback: extract data from row cells ────────────────────────────────
-  function extractFromRow(row) {
-    const cells = row.querySelectorAll('td, [class*="cell"], [class*="Cell"]');
-    let payee = null, amount = null, date = null;
-    for (const cell of cells) {
-      const text = cell.textContent.trim();
-      if (!amount && /[\$\-]?\s*\d+\.\d{2}/.test(text) && text.length < 20) {
-        amount = text;
-      } else if (!date && /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(text)) {
-        date = text;
-      } else if (!payee && text.length > 1 && text.length < 100 && !/^\$?[\d,.-]+$/.test(text)) {
-        payee = text;
-      }
-    }
-    return { payee, amount, date };
-  }
+  // ── MutationObserver for React SPA ───────────────────────────────────────
+  const observer = new MutationObserver(() => attachRowListeners(findTransactionRows()));
+  observer.observe(document.body, { childList: true, subtree: true });
+  attachRowListeners(findTransactionRows());
 
   // ── DOM selectors for LunchMoney transaction rows ─────────────────────────
   const ROW_SELECTORS = [
@@ -239,9 +188,5 @@
     }
     return [];
   }
-
-  const observer = new MutationObserver(onDomChange);
-  observer.observe(document.body, { childList: true, subtree: true });
-  onDomChange();
 
 })();
